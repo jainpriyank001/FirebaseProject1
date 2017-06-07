@@ -1,4 +1,4 @@
- package com.nearbuy.priyankjain.firebaseproject1;
+package com.nearbuy.priyankjain.firebaseproject1;
 
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;

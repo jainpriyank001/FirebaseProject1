@@ -1,6 +1,8 @@
 package com.nearbuy.priyankjain.firebaseproject1;
 
+import android.app.ProgressDialog;
 import android.content.Intent;
+import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -10,11 +12,13 @@ import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
@@ -24,88 +28,60 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
-
-    private EditText mEmailField;
-    private EditText mPasswordField;
-    private Button mLoginBtn;
-
-    private FirebaseAuth mAuth;
-    private FirebaseAuth.AuthStateListener mAuthListener;
-
-
+    private Button mSelectImage;
+    private StorageReference mStorage;
+    private ProgressDialog mProgressDialog;
+    private static final int GALLERY_INTENT=2;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        mAuth=FirebaseAuth.getInstance();
-        mEmailField=(EditText)findViewById(R.id.emailField);
-        mPasswordField=(EditText)findViewById(R.id.passwordField);
-        mLoginBtn=(Button)findViewById(R.id.loginBtn);
+        mStorage= FirebaseStorage.getInstance().getReference();
+        mSelectImage=(Button) findViewById(R.id.selectImage);
+        mProgressDialog=new ProgressDialog(this);
 
-        mAuthListener =new FirebaseAuth.AuthStateListener() {
-            @Override
-            public void onAuthStateChanged(@NonNull FirebaseAuth firebaseAuth) {
-                if(firebaseAuth.getCurrentUser()!=null){
-
-                    startActivity(new Intent(MainActivity.this,AccountActivity.class));
-
-                }
-            }
-        };
-
-
-        mLoginBtn.setOnClickListener(new View.OnClickListener() {
+        mSelectImage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                    startSignIn();
+                Intent intent=new Intent(Intent.ACTION_PICK);
+                intent.setType("image/*");
+
+                startActivityForResult(intent,GALLERY_INTENT);
             }
         });
-
     }
+
+
     @Override
-    protected void onStart(){
-        super.onStart();
-        mAuth.addAuthStateListener(mAuthListener);
-    }
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if(requestCode==GALLERY_INTENT && resultCode==RESULT_OK)
+        {
+            mProgressDialog.setMessage("Uploading..");
+            mProgressDialog.show();
+            Uri uri=data.getData();
 
-
-    private void startSignIn(){
-
-        String email=mEmailField.getText().toString();
-        String password=mPasswordField.getText().toString();
-
-        if(TextUtils.isEmpty(email)|| TextUtils.isEmpty(password)){
-
-            Toast.makeText(MainActivity.this,"Fields Empty",Toast.LENGTH_LONG).show();
-
-        }
-        else{
-            mAuth.signInWithEmailAndPassword(email,password).addOnCompleteListener(new OnCompleteListener<AuthResult>() {
+            StorageReference filepath=mStorage.child("Photos").child(uri.getLastPathSegment());
+            filepath.putFile(uri).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
                 @Override
-                public void onComplete(@NonNull Task<AuthResult> task) {
+                public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
 
-                    if(!task.isSuccessful()){
-
-                        Toast.makeText(MainActivity.this,"Incorrect Credentials",Toast.LENGTH_LONG).show();
-                    }
-                    else{
-
-                        Toast.makeText(MainActivity.this,"Login Successful",Toast.LENGTH_LONG).show();
-
-                    }
+                    Toast.makeText(MainActivity.this,"Upload Done",Toast.LENGTH_LONG).show();
+                    mProgressDialog.dismiss();
                 }
             });
         }
-
     }
-
 }
-
